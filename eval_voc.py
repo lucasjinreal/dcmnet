@@ -23,12 +23,12 @@ from alfred.utils.log import logger as logging
 
 parser = argparse.ArgumentParser(description='Receptive Field Block Net')
 
-parser.add_argument('-v', '--version', default='RFB_vgg',
-                    help='RFB_vgg ,RFB_E_vgg or RFB_mobile version.')
-parser.add_argument('-s', '--size', default='300',
+parser.add_argument('-v', '--version', default='RFB_d3',
+                    help='RFB_vgg ,RFB_E_vgg or RFB_mobile | RFB_d2 | RFB_d3 | RFB_d4 | RFB_d4_fpn')
+parser.add_argument('-s', '--size', default='512',
                     help='300 or 512 input size.')
 parser.add_argument('-d', '--dataset', default='VOC',
-                    help='VOC or COCO version')
+                    help='VOC_783 | VOC_2392 | VOC_8783 | VOC | COCO')
 parser.add_argument('-m', '--trained_model', default='./weights/2392Final_RFB_d3_VOC.pth',
                     type=str, help='Trained state_dict file path to open')
 parser.add_argument('--save_folder', default='eval/', type=str,
@@ -84,7 +84,7 @@ def test_net(save_folder, net, detector, cuda, testset, transform, max_per_image
     # dump predictions and assoc. ground truth to text file for now
     num_images = len(testset)
     # 738:6 classes ; 2392:7 ; 8718:6
-    num_classes = (6, 81)[args.dataset == 'COCO']
+    num_classes = (21, 81)[args.dataset == 'COCO']
     all_boxes = [[[] for _ in range(num_images)]
                  for _ in range(num_classes)]
 
@@ -165,7 +165,7 @@ if __name__ == '__main__':
     # load net
     img_dim = (300, 512)[args.size == '512']
     # 738:6 classes ; 2392:7 ; 8718:6
-    num_classes = (6, 81)[args.dataset == 'COCO']
+    num_classes = (21, 81)[args.dataset == 'COCO']
     net = build_net('test', img_dim, num_classes)    # initialize detector
 
     logging.info('load model from: {}'.format(args.trained_model))
