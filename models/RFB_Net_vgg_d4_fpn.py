@@ -329,10 +329,18 @@ class RFBNet(nn.Module):
         self.BasicRFB1 = BasicRFB_d(1024, 1024, scale=1.0, visual=2)
         self.BasicRFB2 = BasicRFB_d1(1024, 512, stride=2, scale=1.0, visual=2)
         self.BasicRFB3 = BasicRFB(512, 256, stride=2, scale=1.0, visual=1)
-        self.BasicConva1 = BasicConv(256, 128, kernel_size=1, stride=1)
-        self.BasicConva2 = BasicConv(128, 256, kernel_size=3, stride=1)
-        self.BasicConva3 = BasicConv(256, 128, kernel_size=1, stride=1)
-        self.BasicConva4 = BasicConv(128, 256, kernel_size=3, stride=1)
+        
+        if self.size == 300:
+            self.BasicConva1 = BasicConv(256, 128, kernel_size=1, stride=1)
+            self.BasicConva2 = BasicConv(128, 256, kernel_size=3, stride=1)
+            self.BasicConva3 = BasicConv(256, 128, kernel_size=1, stride=1)
+            self.BasicConva4 = BasicConv(128, 256, kernel_size=3, stride=1)
+        elif self.size == 512:
+            self.BasicConva1 = BasicConv(256, 128, kernel_size=1, stride=1)
+            self.BasicConva2 = BasicConv(128, 256, kernel_size=3, stride=1)
+            self.BasicConva3 = BasicConv(256, 128, kernel_size=1, stride=1)
+            self.BasicConva4 = BasicConv(128, 256, kernel_size=3, stride=1)
+
 
     def forward(self, x):
         """Applies network layers and ops on input image(s) x.
@@ -380,48 +388,15 @@ class RFBNet(nn.Module):
         s = self.Norm(fpn_outputs[1])
         sources.append(s)
 
-        # print(len(self.base))
-        # apply extra layers and cache source layer outputs
-        '''
         for k, v in enumerate(self.extras):
             x = v(x)
-            if k < self.indicator or k%2 ==0:
-                sources.append(x)
-        '''
-
-        # x = BasicRFB(1024, 1024, scale=1.0, visual=2)(x) #0
-        # s1 = self.BasicRFB1(x)
-        s1 = self.BasicRFB1(fpn_outputs[0])
-        sources.append(s1)
-        # x = BasicRFB(1024, 512, stride=2, scale=1.0, visual=2)(x)#1
-        s2 = self.BasicRFB2(s1)
-        sources.append(s2)
-        # x = BasicRFB(512, 256, stride=2, scale=1.0, visual=1)(x)#2
-        s3 = self.BasicRFB3(s2)
-        sources.append(s3)
-        # x = BasicConv(256, 128, kernel_size=1, stride=1)(x)#第3层不输出
-        s4 = self.BasicConva1(s3)
-        # x = BasicConv(128, 256, kernel_size=3, stride=1)(x)#4
-        s5 = self.BasicConva2(s4)
-        sources.append(s5)
-        # x = BasicConv(256, 128, kernel_size=1, stride=1)(x)#第5层不输出
-        s6 = self.BasicConva3(s5)
-        # x = BasicConv(128, 256, kernel_size=3, stride=1)(x)#6
-        s7 = self.BasicConva4(s6)
-        sources.append(s7)
-        '''for k, v in enumerate(self.extras):
-            x = v(x)
             if k < self.indicator or k % 2 == 0:
-                sources.append(x)'''
+                sources.append(x)
 
-        # print(len(sources))
-        x = s7
         # apply multibox head to source layers
         for (x, l, c) in zip(sources, self.loc, self.conf):
             loc.append(l(x).permute(0, 2, 3, 1).contiguous())
             conf.append(c(x).permute(0, 2, 3, 1).contiguous())
-
-        #print([o.size() for o in loc])
 
         loc = torch.cat([o.view(o.size(0), -1) for o in loc], 1)
         conf = torch.cat([o.view(o.size(0), -1) for o in conf], 1)
@@ -523,6 +498,37 @@ def add_extras():
     return layers
 
 
+def add_extras_ori(size, cfg, i, batch_norm=False):
+    # Extra layers added to VGG for feature scaling
+    layers = []
+    in_channels = i
+    flag = False
+    for k, v in enumerate(cfg):
+        if in_channels != 'S':
+            if v == 'S':
+                if in_channels == 256 and size == 512:
+                    layers += [BasicRFB_d1(in_channels, cfg[k+1],
+                                        stride=2, scale=1.0, visual=1)]
+                else:
+                    layers += [BasicRFB(in_channels, cfg[k+1],
+                                        stride=2, scale=1.0, visual=2)]
+            else:
+                layers += [BasicRFB(in_channels, v, scale=1.0, visual=2)]
+        in_channels = v
+    if size == 512:
+        layers += [BasicConv(256, 128, kernel_size=1, stride=1)]
+        layers += [BasicConv(128, 256, kernel_size=4, stride=1, padding=1)]
+    elif size == 300:
+        layers += [BasicConv(256, 128, kernel_size=1, stride=1)]
+        layers += [BasicConv(128, 256, kernel_size=3, stride=1)]
+        layers += [BasicConv(256, 128, kernel_size=1, stride=1)]
+        layers += [BasicConv(128, 256, kernel_size=3, stride=1)]
+    else:
+        print("Error: Sorry only RFBNet300 and RFBNet512 are supported!")
+        return
+    return layers
+
+
 extras = {
     '300': [1024, 'S', 512, 'S', 256],
     '512': [1024, 'S', 512, 'S', 256, 'S', 256, 'S', 256]
@@ -582,5 +588,6 @@ def build_net(phase, size=300, num_classes=21):
      #                           add_extras(size, extras[str(size)], 1024),
       #                          mbox[str(size)], num_classes), num_classes)
     return RFBNet(phase, size, *multibox(size, vgg(base[str(size)], 3),
-                                         add_extras(),
+                                        #  add_extras(),
+                                         add_extras_ori(size, extras[str(size)], 1024),
                                          mbox[str(size)], num_classes), num_classes)
