@@ -23,12 +23,12 @@ else:
     import xml.etree.ElementTree as ET
 
 
-VOC_CLASSES = ('__background__',  # always index 0
-               'aeroplane', 'bicycle', 'bird', 'boat',
-               'bottle', 'bus', 'car', 'cat', 'chair',
-               'cow', 'diningtable', 'dog', 'horse',
-               'motorbike', 'person', 'pottedplant',
-               'sheep', 'sofa', 'train', 'tvmonitor')
+# VOC_CLASSES = ( '__background__', 'gun', 'scissor', 'pilers', 'screwdriver','fruit_knife')#738
+# VOC_CLASSES = ( '__background__', 'battle','fire','fork','fruit_knife', 'gun', 'scissor')#2392
+
+VOC_CLASSES = ('__background__', 'wrench', 'pliers',
+               'gun', 'knife', 'scissors')  # 8718
+# VOC_CLASSES = ( '__background__', 'Wrench', 'Pliers', 'Gun', 'Knife', 'Scissors') #8718
 
 # for making bounding boxes pretty
 COLORS = ((255, 0, 0, 128), (0, 255, 0, 128), (0, 0, 255, 128),
@@ -140,7 +140,7 @@ class AnnotationTransform(object):
         return res  # [[xmin, ymin, xmax, ymax, label_ind], ... ]
 
 
-class VOCDetection(data.Dataset):
+class VOCXray783Detection(data.Dataset):
 
     """VOC Detection Dataset Object
 

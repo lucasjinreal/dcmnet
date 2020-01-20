@@ -1,3 +1,6 @@
 data/
 eval/
 weights/
+.idea/
+.vs/
+.vscode/
