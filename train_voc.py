@@ -15,6 +15,7 @@ import torch.utils.data as data
 from datasets.data_augment import BaseTransform, preproc
 from datasets.config import VOCroot, COCOroot, VOC_300, VOC_512, COCO_300, COCO_512, COCO_mobile_300
 from datasets.voc0712 import VOCDetection, VOC_CLASSES, detection_collate, AnnotationTransform
+from datasets.coco import COCODetection
 
 from layers.modules import MultiBoxLoss
 from layers.functions import PriorBox
@@ -63,13 +64,12 @@ parser.add_argument('--save_folder', default='./weights/',
 args = parser.parse_args()
 
 
-
 def train():
     if not os.path.exists(args.save_folder):
         os.mkdir(args.save_folder)
 
     if args.dataset == 'VOC':
-        train_sets = [('2007', 'trainval')]
+        train_sets = [('2007', 'trainval'), ('2012', 'trainval')]
         cfg = (VOC_300, VOC_512)[args.size == '512']
     else:
         train_sets = [('2014', 'train'), ('2014', 'valminusminival')]
@@ -100,6 +100,7 @@ def train():
     p = (0.6, 0.2)[args.version == 'RFB_mobile']
     # 738:6 classes ; 2392:7 ; 8718:6
     num_classes = (21, 81)[args.dataset == 'COCO']
+    logging.info('dataset number of classes: {}'.format(num_classes))
     batch_size = args.batch_size
     weight_decay = 0.0005
     gamma = 0.1
@@ -120,12 +121,12 @@ def train():
             for key in m.state_dict():
                 if key.split('.')[-1] == 'weight':
                     if 'conv' in key:
-                        init.kaiming_normal_(m.state_dict()[key], mode='fan_out')
+                        init.kaiming_normal_(
+                            m.state_dict()[key], mode='fan_out')
                     if 'bn' in key:
                         m.state_dict()[key][...] = 1
                 elif key.split('.')[-1] == 'bias':
                     m.state_dict()[key][...] = 0
-
         print('Initializing weights...')
     # initialize newly added layers' weights with kaiming_normal method
         net.extras.apply(weights_init)
@@ -158,12 +159,10 @@ def train():
         net.cuda()
         cudnn.benchmark = True
 
-
     optimizer = optim.SGD(net.parameters(), lr=args.lr,
-                        momentum=args.momentum, weight_decay=args.weight_decay)
+                          momentum=args.momentum, weight_decay=args.weight_decay)
     # optimizer = optim.RMSprop(net.parameters(), lr=args.lr,alpha = 0.9, eps=1e-08,
     #                      momentum=args.momentum, weight_decay=args.weight_decay)
-
     criterion = MultiBoxLoss(num_classes, 0.5, True, 0, True, 3, 0.5, False)
     priorbox = PriorBox(cfg)
     with torch.no_grad():
@@ -171,14 +170,13 @@ def train():
         if args.cuda:
             priors = priors.cuda()
 
-
     net.train()
     # loss counters
     loc_loss = 0  # epoch
     conf_loss = 0
     epoch = 0 + args.resume_epoch
-    print('Loading Dataset...')
 
+    logging.info('Loading Dataset: {}'.format(args.dataset))
     if args.dataset == 'VOC':
         dataset = VOCDetection(VOCroot, train_sets, preproc(
             img_dim, rgb_means, p), AnnotationTransform())
@@ -250,7 +248,8 @@ def train():
                   repr(iteration) + ' || L: %.4f C: %.4f||' % (
                 loss_l.item(), loss_c.item()) +
                 'Batch time: %.4f sec. ||' % (load_t1 - load_t0) + 'LR: %.8f' % (lr))
-    torch.save(net.state_dict(), os.path.join(args.save_folder, 'Final_' + args.version + '_' + args.dataset + '.pth'))
+    torch.save(net.state_dict(), os.path.join(args.save_folder,
+                                              'Final_' + args.version + '_' + args.dataset + '.pth'))
 
 
 def adjust_learning_rate(optimizer, gamma, epoch, step_index, iteration, epoch_size):

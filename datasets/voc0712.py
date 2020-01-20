@@ -21,6 +21,8 @@ if sys.version_info[0] == 2:
     import xml.etree.cElementTree as ET
 else:
     import xml.etree.ElementTree as ET
+from alfred.utils.log import logger as logging
+
 
 
 VOC_CLASSES = ('__background__',  # always index 0
@@ -59,30 +61,24 @@ class VOCSegmentation(data.Dataset):
         self.image_set = image_set
         self.transform = transform
         self.target_transform = target_transform
-
         self._annopath = os.path.join(
             self.root, dataset_name, 'SegmentationClass', '%s.png')
         self._imgpath = os.path.join(
             self.root, dataset_name, 'JPEGImages', '%s.jpg')
         self._imgsetpath = os.path.join(
             self.root, dataset_name, 'ImageSets', 'Segmentation', '%s.txt')
-
         with open(self._imgsetpath % self.image_set) as f:
             self.ids = f.readlines()
         self.ids = [x.strip('\n') for x in self.ids]
 
     def __getitem__(self, index):
         img_id = self.ids[index]
-
         target = Image.open(self._annopath % img_id).convert('RGB')
         img = Image.open(self._imgpath % img_id).convert('RGB')
-
         if self.transform is not None:
             img = self.transform(img)
-
         if self.target_transform is not None:
             target = self.target_transform(target)
-
         return img, target
 
     def __len__(self):
@@ -136,7 +132,6 @@ class AnnotationTransform(object):
             # [xmin, ymin, xmax, ymax, label_ind]
             res = np.vstack((res, bndbox))
             # img_id = target.find('filename').text[:-4]
-
         return res  # [[xmin, ymin, xmax, ymax, label_ind], ... ]
 
 
@@ -173,6 +168,7 @@ class VOCDetection(data.Dataset):
             rootpath = os.path.join(self.root, 'VOC' + year)
             for line in open(os.path.join(rootpath, 'ImageSets', 'Main', name + '.txt')):
                 self.ids.append((rootpath, line.strip()))
+        logging.info('training all on {} samples.'.format(len(self.ids)))
 
     def __getitem__(self, index):
         img_id = self.ids[index]
@@ -188,7 +184,6 @@ class VOCDetection(data.Dataset):
             # print(img.size())
           # target = self.target_transform(target, width, height)
         # print(target.shape)
-
         return img, target
 
     def __len__(self):
