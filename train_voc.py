@@ -36,7 +36,7 @@ parser.add_argument(
     '--basenet', default='./weights/vgg16_reducedfc.pth', help='pretrained base model')
 parser.add_argument('--jaccard_threshold', default=0.5,
                     type=float, help='Min Jaccard index for matching')
-parser.add_argument('-b', '--batch_size', default=16,
+parser.add_argument('-b', '--batch_size', default=8,
                     type=int, help='Batch size for training')
 parser.add_argument('--num_workers', default=8,
                     type=int, help='Number of workers used in dataloading')
@@ -99,7 +99,7 @@ def train():
         args.version == 'RFB_mobile']
     p = (0.6, 0.2)[args.version == 'RFB_mobile']
     # 738:6 classes ; 2392:7 ; 8718:6
-    num_classes = (6, 81)[args.dataset == 'COCO']
+    num_classes = (21, 81)[args.dataset == 'COCO']
     batch_size = args.batch_size
     weight_decay = 0.0005
     gamma = 0.1
