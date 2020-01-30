@@ -14,7 +14,8 @@ import torch.utils.data as data
 
 from datasets.data_augment import BaseTransform, preproc
 from datasets.config import VOCroot, COCOroot, VOC_300, VOC_512, COCO_300, COCO_512, COCO_mobile_300
-from datasets.voc0712 import VOCDetection, VOC_CLASSES, detection_collate
+from datasets.voc_xray2392 import VOC_CLASSES, detection_collate
+from datasets.voc_xray2392 import VOCXray783Detection as VOCDetection
 
 from layers.modules import MultiBoxLoss
 from layers.functions import PriorBox
