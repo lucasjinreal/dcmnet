@@ -9,8 +9,11 @@ import torch.backends.cudnn as cudnn
 import torchvision.transforms as transforms
 import numpy as np
 from torch.autograd import Variable
-from data import VOCroot, COCOroot
-from data import AnnotationTransform, COCODetection, VOCDetection, BaseTransform, VOC_300, VOC_512, COCO_300, COCO_512, COCO_mobile_300
+
+from datasets.data_augment import BaseTransform, preproc
+from datasets.config import VOCroot, COCOroot, VOC_300, VOC_512, COCO_300, COCO_512, COCO_mobile_300
+from datasets.voc0712 import VOCDetection, VOC_CLASSES, detection_collate, AnnotationTransform
+from datasets.coco import COCODetection
 
 import torch.utils.data as data
 from layers.functions import Detect, PriorBox
