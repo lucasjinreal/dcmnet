@@ -20,7 +20,7 @@ from layers.functions import Detect, PriorBox
 from utils.nms_wrapper import nms
 from utils.timer import Timer
 from alfred.utils.log import logger as logging
-
+from alfred.vis.image.common import get_unique_color_by_id
 import cv2
 
 
@@ -129,6 +129,12 @@ def test_net(save_folder, net, detector, cuda, testset, transform, vis=True, max
 
         _t['misc'].tic()
 
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        font_scale = 0.36
+
+        font_thickness = 1
+        line_thickness = 1
+
         for j in range(1, num_classes):
             inds = np.where(scores[:, j] > thresh)[0]
             if len(inds) == 0:
@@ -142,6 +148,42 @@ def test_net(save_folder, net, detector, cuda, testset, transform, vis=True, max
             keep = nms(c_dets, 0.45, force_cpu=False)
             c_dets = c_dets[keep, :]
             all_boxes[j][i] = c_dets
+
+            unique_color = get_unique_color_by_id(j)
+            if vis:
+                for i in range(len(inds)):
+                    bb = c_bboxes[i]
+                    score = c_scores[i]
+
+                    y1 = int(bb[0])
+                    x1 = int(bb[1])
+                    y2 = int(bb[2])
+                    x2 = int(bb[3])
+
+                    cv2.rectangle(img, (x1, y1), (x2, y2),
+                                unique_color, line_thickness)
+
+                    text_label = '{}'.format(j)
+                    (ret_val, base_line) = cv2.getTextSize(
+                        text_label, font, font_scale, font_thickness)
+                    text_org = (x1, y1 - 0)
+
+                    cv2.rectangle(img, (text_org[0] - 5, text_org[1] + base_line + 2),
+                                (text_org[0] + ret_val[0] + 5, text_org[1] - ret_val[1] - 2), unique_color, line_thickness)
+                    # this rectangle for fill text rect
+                    cv2.rectangle(img, (text_org[0] - 5, text_org[1] + base_line + 2),
+                                (text_org[0] + ret_val[0] + 4,
+                                text_org[1] - ret_val[1] - 2),
+                                unique_color, -1)
+                    cv2.putText(img, text_label, text_org, font,
+                                font_scale, (255, 255, 255), font_thickness)
+
+        # we can vis det result here
+        logging.info('all boxes: {}'.format(all_boxes))
+        if vis:
+            cv2.imshow('rr', img)
+            cv2.waitKey(0)
+            
         if max_per_image > 0:
             image_scores = np.hstack([all_boxes[j][i][:, -1]
                                       for j in range(1, num_classes)])
